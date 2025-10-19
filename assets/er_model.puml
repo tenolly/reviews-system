@@ -1,0 +1,96 @@
+@startuml er
+hide circle
+skinparam linetype ortho
+!theme plain
+
+' ========= Entities (conceptual) =========
+entity "User" as User {
+  username
+  email
+  admin
+  created_at
+}
+
+entity "Teacher" as Teacher {
+  isu
+  name
+  photo_url
+  email
+  phone
+  url
+  updated_at
+}
+
+entity "Subject" as Subject {
+  name
+}
+
+entity "Tag" as Tag {
+  name
+}
+
+entity "Faculty" as Faculty {
+  code
+  name
+}
+
+' Associative entity (relationship with attributes)
+entity "TeachingAffiliation" as TeachingAffiliation {
+  since_date
+  until_date
+}
+
+entity "Review" as Review {
+  study_year
+  comment
+  overall
+  difficulty
+  interesting
+  organization
+  fairness
+}
+
+' Associative entity for M:N
+entity "ReviewTag" as ReviewTag {
+}
+
+entity "BlacklistEntry" as BlacklistEntry {
+  reason
+  blacklist_date
+}
+
+entity "ModerationAction" as ModerationAction {
+  target_type  ' {review|report}
+  target_id
+  action       ' {hide|unhide|delete|warn|ban|close}
+  note
+  created_at
+}
+
+' ========= Relationships & cardinalities =========
+Teacher  ||--o{ Review               : evaluates in
+Subject  ||--o{ Review               : about
+Review   ||--o{ ReviewTag            : has
+Tag      ||--o{ ReviewTag            : labels
+
+Teacher  ||--o{ TeachingAffiliation  : affiliated with
+Faculty  ||--o{ TeachingAffiliation  : includes
+
+User     ||--o{ BlacklistEntry       : has
+User     ||--o{ ModerationAction     : performs
+
+' Polymorphic target (conceptual note)
+ModerationAction ..> Review : may target
+
+' ========= Notes =========
+note right of TeachingAffiliation
+M:N between Teacher and Faculty
+Attributes on relationship:
+since_date, until_date
+end note
+
+note right of ReviewTag
+M:N between Review and Tag
+end note
+
+@enduml
