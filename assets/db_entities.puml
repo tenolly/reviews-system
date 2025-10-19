@@ -1,0 +1,114 @@
+@startuml db
+hide circle
+skinparam linetype ortho
+!theme plain
+
+entity "users" as users {
+  *id: BIGSERIAL <<PK>>
+  username: TEXT <<UNIQUE>>
+  password_hash: TEXT
+  email: TEXT
+  admin: BOOLEAN
+  created_at: TIMESTAMP
+}
+
+entity "teachers" as teachers {
+  *id: BIGINT <<PK>>
+  isu: INTEGER <<UNIQUE>>
+  name: TEXT
+  photo_url: TEXT
+  email: TEXT
+  phone: TEXT
+  url: TEXT
+  updated_at: TIMESTAMP
+}
+
+entity "subjects" as subjects {
+  *id: BIGINT <<PK>>
+  name: TEXT <<UNIQUE>>
+}
+
+entity "tags" as tags {
+  *id: BIGINT <<PK>>
+  name: TEXT <<UNIQUE>>
+}
+
+entity "faculties" as faculties {
+  *id: BIGINT <<PK>>
+  code: TEXT <<UNIQUE>>
+  name: TEXT <<UNIQUE>>
+}
+
+entity "teacher_faculties" as teacher_faculties {
+  *id: BIGINT <<PK>>
+  teacher_id: BIGINT <<FK>>
+  faculty_id: BIGINT <<FK>>
+  since_date: DATE
+  until_date: DATE
+}
+
+entity "reviews" as reviews {
+  *id: BIGINT <<PK>>
+  teacher_id: BIGINT <<FK>>
+  subject_id: BIGINT <<FK>>
+  study_year: INTEGER
+  comment: TEXT
+  overall: SMALLINT
+  difficulty: SMALLINT
+  interesting: SMALLINT
+  organization: SMALLINT
+  fairness: SMALLINT
+  <<UNIQUE(teacher_id, subject_id, comment)>>
+}
+
+entity "review_tags" as review_tags {
+  *review_id: BIGINT <<FK>>
+  *tag_id: BIGINT <<FK>>
+}
+
+entity "black_list" as black_list {
+  *id: BIGINT <<PK>>
+  reason: TEXT
+  blacklist_date: TIMESTAMP
+  user_id: BIGINT <<FK>>
+}
+
+entity "moderation_actions" as moderation_actions {
+  *id: BIGINT <<PK>>
+  target_type: TEXT
+  target_id: BIGINT
+  moderator_id: BIGINT <<FK>>
+  action: TEXT
+  note: TEXT
+  created_at: TIMESTAMP
+}
+
+' ---------- Relationships ----------
+teachers  ||--o{ reviews           : "1:N"
+subjects  ||--o{ reviews           : "1:N"
+reviews   ||--o{ review_tags       : "1:N"
+tags      ||--o{ review_tags       : "1:N"
+teachers  ||--o{ teacher_faculties : "1:N"
+faculties ||--o{ teacher_faculties : "1:N"
+users     ||--o{ black_list        : "1:N"
+users     ||--o{ moderation_actions: "1:N (moderator)"
+
+' Polymorphic target hint
+moderation_actions ..> reviews : "targets when target_type='review'"
+
+' ---------- Compact notes ----------
+note right of reviews
+study_year 2000–2100
+scores 1–5 (overall, difficulty,
+interesting, organization, fairness)
+end note
+
+note right of teacher_faculties
+until_date NULL or > since_date
+end note
+
+note right of moderation_actions
+target_type ∈ {review, report}
+action ∈ {hide, unhide, delete, warn, ban, close}
+end note
+@enduml
