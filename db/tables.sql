@@ -2,9 +2,10 @@ CREATE TABLE IF NOT EXISTS users (
   id BIGSERIAL PRIMARY KEY,
   username TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
-  email TEXT,
-  admin BOOLEAN DEFAULT false,
-  created_at TIMESTAMP NOT NULL DEFAULT now()
+  email TEXT UNIQUE,
+  is_admin BOOLEAN DEFAULT false,
+  created_at TIMESTAMP NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS teachers (
@@ -12,11 +13,16 @@ CREATE TABLE IF NOT EXISTS teachers (
   isu INTEGER UNIQUE NOT NULL,
   name TEXT NOT NULL,
   photo_url TEXT,
-  email TEXT,
   phone TEXT,
   url TEXT, -- isu.ifmo
   updated_at TIMESTAMP NOT NULL DEFAULT now()
 );
+
+CREATE TABLE IF NOT EXISTS contacts (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  contact_type TEXT,
+  teacher_id BIGINT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE
+)
 
 CREATE TABLE IF NOT EXISTS subjects (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -25,6 +31,7 @@ CREATE TABLE IF NOT EXISTS subjects (
 
 CREATE TABLE IF NOT EXISTS tags (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  count INT, 
   name TEXT UNIQUE NOT NULL
 );
 
@@ -37,16 +44,14 @@ CREATE TABLE IF NOT EXISTS faculties (
 CREATE TABLE IF NOT EXISTS teacher_faculties (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   teacher_id BIGINT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
-  faculty_id BIGINT NOT NULL REFERENCES faculties(id) ON DELETE RESTRICT,
-  since_date DATE NOT NULL,
-  until_date DATE,
-  CHECK (until_date IS NULL OR since_date < until_date)
+  faculty_id BIGINT NOT NULL REFERENCES faculties(id) ON DELETE RESTRICT
 );
 
 CREATE TABLE IF NOT EXISTS reviews (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   teacher_id BIGINT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
   subject_id BIGINT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   study_year INTEGER NOT NULL CHECK (study_year BETWEEN 2000 AND 2100),
   comment TEXT NOT NULL,
   overall SMALLINT NOT NULL CHECK (overall BETWEEN 1 AND 5),
@@ -54,28 +59,33 @@ CREATE TABLE IF NOT EXISTS reviews (
   interesting SMALLINT NOT NULL CHECK (interesting BETWEEN 1 AND 5),
   organization SMALLINT NOT NULL CHECK (organization BETWEEN 1 AND 5),
   fairness SMALLINT NOT NULL CHECK (fairness BETWEEN 1 AND 5),
+  created_at TIMESTAMP NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP NOT NULL DEFAULT now(),
+  is_edited BOOLEAN DEFAULT FALSE,
+  is_deleted BOOLEAN,
   CONSTRAINT uniq_review UNIQUE (teacher_id, subject_id, comment)
 );
 
 CREATE TABLE IF NOT EXISTS review_tags (
   review_id BIGINT NOT NULL REFERENCES reviews(id) ON DELETE CASCADE,
   tag_id BIGINT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
-  PRIMARY KEY (review_id, tag_id)
+  teacher_id BIGINT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
+  PRIMARY KEY (review_id, tag_id, teacher_id)
 );
 
 CREATE TABLE IF NOT EXISTS black_list (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   reason TEXT,
   blacklist_date TIMESTAMP NOT NULL DEFAULT now(),
-  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  admin_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS moderation_actions (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  target_type TEXT NOT NULL CHECK (target_type IN ('review', 'report')),
-  target_id BIGINT NOT NULL,
+  target_id BIGINT NOT NULL, -- user/review
   moderator_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
-  action TEXT NOT NULL CHECK (action IN ('hide', 'unhide', 'delete', 'warn', 'ban', 'close')),
+  action TEXT NOT NULL CHECK (action IN ('delete', 'ban')),
   note TEXT,
   created_at TIMESTAMP NOT NULL DEFAULT now()
 );
