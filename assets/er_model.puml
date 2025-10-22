@@ -1,0 +1,103 @@
+@startuml er
+hide circle
+skinparam linetype ortho
+!theme plain
+
+' ========= Entities (conceptual) =========
+entity "User" as User {
+  username
+  email
+  is_admin
+  created_at
+}
+
+entity "Teacher" as Teacher {
+  isu
+  name
+  photo_url
+  phone
+  url
+  updated_at
+}
+
+entity "Contact" as Contact {
+  contact_type
+}
+
+entity "Subject" as Subject {
+  name
+}
+
+entity "Tag" as Tag {
+  name
+  count
+}
+
+entity "Faculty" as Faculty {
+  code
+  name
+}
+
+entity "TeachingAffiliation" as TeachingAffiliation {
+}
+
+entity "Review" as Review {
+  study_year
+  comment
+  overall
+  difficulty
+  interesting
+  organization
+  fairness
+  created_at
+  updated_at
+  is_edited
+  is_deleted
+}
+
+entity "ReviewTag" as ReviewTag {
+}
+
+entity "BlacklistEntry" as BlacklistEntry {
+  reason
+  blacklist_date
+}
+
+entity "ModerationAction" as ModerationAction {
+  target_id
+  action       ' {delete|ban}
+  note
+  created_at
+}
+
+' ========= Relationships & cardinalities =========
+Teacher  ||--o{ Review               : evaluates in
+Subject  ||--o{ Review               : about
+User     ||--o{ Review               : authored by
+
+Review   ||--o{ ReviewTag            : has
+Tag      ||--o{ ReviewTag            : labels
+
+Teacher  ||--o{ TeachingAffiliation  : affiliated with
+Faculty  ||--o{ TeachingAffiliation  : includes
+
+Teacher  ||--o{ Contact              : has
+
+User     ||--o{ BlacklistEntry       : added by (admin)
+User     ||--o{ BlacklistEntry       : targets (listed user)
+
+User     ||--o{ ModerationAction     : performs
+ModerationAction ..> Review           : may target
+ModerationAction ..> User             : may target
+
+' ========= Notes =========
+note right of TeachingAffiliation
+M:N between Teacher and Faculty
+(endless in conceptual model)
+end note
+
+note right of ReviewTag
+M:N between Review and Tag
+(implementation keeps teacher_id for optimization)
+end note
+@enduml

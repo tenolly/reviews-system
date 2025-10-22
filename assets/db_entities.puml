@@ -1,0 +1,110 @@
+@startuml db
+hide circle
+skinparam linetype ortho
+!theme plain
+
+entity "users" as users {
+  *id: BIGSERIAL <<PK>>
+  username: TEXT <<UNIQUE>>
+  password_hash: TEXT
+  email: TEXT <<UNIQUE>>
+  is_admin: BOOLEAN
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+entity "teachers" as teachers {
+  *id: BIGINT <<PK>>
+  isu: INTEGER <<UNIQUE>>
+  name: TEXT
+  photo_url: TEXT
+  phone: TEXT
+  url: TEXT
+  updated_at: TIMESTAMP
+}
+
+entity "contacts" as contacts {
+  *id: BIGINT <<PK>>
+  contact_type: TEXT
+  teacher_id: BIGINT <<FK>>
+}
+
+entity "subjects" as subjects {
+  *id: BIGINT <<PK>>
+  name: TEXT <<UNIQUE>>
+}
+
+entity "tags" as tags {
+  *id: BIGINT <<PK>>
+  count: INT
+  name: TEXT <<UNIQUE>>
+}
+
+entity "faculties" as faculties {
+  *id: BIGINT <<PK>>
+  code: TEXT <<UNIQUE>>
+  name: TEXT <<UNIQUE>>
+}
+
+entity "teacher_faculties" as teacher_faculties {
+  *id: BIGINT <<PK>>
+  teacher_id: BIGINT <<FK>>
+  faculty_id: BIGINT <<FK>>
+}
+
+entity "reviews" as reviews {
+  *id: BIGINT <<PK>>
+  teacher_id: BIGINT <<FK>>
+  subject_id: BIGINT <<FK>>
+  user_id: BIGINT <<FK>>
+  study_year: INTEGER
+  comment: TEXT
+  overall: SMALLINT
+  difficulty: SMALLINT
+  interesting: SMALLINT
+  organization: SMALLINT
+  fairness: SMALLINT
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+  is_edited: BOOLEAN
+  is_deleted: BOOLEAN
+  <<UNIQUE(teacher_id, subject_id, comment)>>
+}
+
+entity "review_tags" as review_tags {
+  *review_id: BIGINT <<FK>>
+  *tag_id: BIGINT <<FK>>
+  *teacher_id: BIGINT <<FK>>
+}
+
+entity "black_list" as black_list {
+  *id: BIGINT <<PK>>
+  reason: TEXT
+  blacklist_date: TIMESTAMP
+  user_id: BIGINT <<FK>>
+  admin_id: BIGINT <<FK>>
+}
+
+entity "moderation_actions" as moderation_actions {
+  *id: BIGINT <<PK>>
+  target_id: BIGINT
+  moderator_id: BIGINT <<FK>>
+  action: TEXT
+  note: TEXT
+  created_at: TIMESTAMP
+}
+
+teachers  ||--o{ reviews           : "1:N"
+subjects  ||--o{ reviews           : "1:N"
+users     ||--o{ reviews           : "1:N (author)"
+reviews   ||--o{ review_tags       : "1:N"
+tags      ||--o{ review_tags       : "1:N"
+teachers  ||--o{ review_tags       : "1:N"
+teachers  ||--o{ teacher_faculties : "1:N"
+faculties ||--o{ teacher_faculties : "1:N"
+teachers  ||--o{ contacts          : "1:N"
+users     ||--o{ black_list        : "1:N (user)"
+users     ||--o{ black_list        : "1:N (admin)"
+users     ||--o{ moderation_actions: "1:N (moderator)"
+
+@enduml
