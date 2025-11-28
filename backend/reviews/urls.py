@@ -16,4 +16,6 @@ urlpatterns = [
     path("subjects/", views.SubjectsListView.as_view()),
     path("tags/", views.TagsListView.as_view()),
     path("faculties/", views.FacultiesListView.as_view()),
+    path("users/", views.UserList.as_view()),
+    path("users/<int:pk>/", views.UserDetail.as_view()),
 ]

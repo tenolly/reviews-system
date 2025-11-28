@@ -4,9 +4,29 @@ from reviews.permissions import IsOwnerOrReadOnly
 from reviews.serializers import *
 from reviews.models import *
 from rest_framework import permissions
+from django.contrib.auth.models import User
+
+
+class UserList(generics.ListAPIView):
+    permission_classes = [
+        permissions.IsAdminUser
+    ]
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+
+class UserDetail(generics.RetrieveAPIView):
+    permission_classes = [
+        permissions.IsAdminUser
+    ]
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
 
 
 class TeacherListCreateView(generics.ListCreateAPIView):
+    permission_classes = [
+        permissions.IsAdminUser
+    ]
     queryset = Teacher.objects.all()
     serializer_class = TeacherReadSerializer
 
@@ -15,6 +35,9 @@ class TeacherListCreateView(generics.ListCreateAPIView):
 
 
 class TeacherListDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [
+        permissions.IsAdminUser
+    ]
     queryset = Teacher.objects.all()
     serializer_class = TeacherWriteSerializer
 
@@ -23,6 +46,9 @@ class TeacherListDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class ContactListCreateView(generics.ListCreateAPIView):
+    permission_classes = [
+        permissions.IsAdminUser
+    ]
     serializer_class = ContactSerializer
 
     def get_queryset(self):
@@ -35,6 +61,9 @@ class ContactListCreateView(generics.ListCreateAPIView):
 
 
 class ContactListDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [
+        permissions.IsAdminUser
+    ]
     lookup_url_kwarg = "contact_id"
     serializer_class = ContactSerializer
 
@@ -44,6 +73,8 @@ class ContactListDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class ReviewListCreateView(generics.ListCreateAPIView):
+    permission_classes = [
+        permissions.IsAuthenticatedOrReadOnly]  # the user can see all reviews
     serializer_class = ReviewSerializer
 
     def get_queryset(self):
@@ -54,6 +85,9 @@ class ReviewListCreateView(generics.ListCreateAPIView):
 
         return queryset
 
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
 
 class ReviewDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [
@@ -63,15 +97,24 @@ class ReviewDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class SubjectsListView(generics.ListCreateAPIView):
+    permission_classes = [
+        permissions.IsAdminUser
+    ]
     queryset = Subject.objects.all()
     serializer_class = SubjectSerializer
 
 
 class TagsListView(generics.ListCreateAPIView):
+    permission_classes = [
+        permissions.IsAdminUser
+    ]
     queryset = Tag.objects.all()
     serializer_class = TagsSerializer
 
 
 class FacultiesListView(generics.ListCreateAPIView):
+    permission_classes = [
+        permissions.IsAdminUser
+    ]
     queryset = Faculty.objects.all()
     serializer_class = TagsSerializer
