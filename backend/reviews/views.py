@@ -23,9 +23,9 @@ class UserDetail(generics.RetrieveAPIView):
     serializer_class = UserSerializer
 
 
-class TeacherListCreateView(generics.ListCreateAPIView):
+class TeacherListCreateView(generics.ListAPIView):
     permission_classes = [
-        permissions.IsAdminUser
+        permissions.IsAuthenticatedOrReadOnly
     ]
     queryset = Teacher.objects.all()
     serializer_class = TeacherReadSerializer
@@ -106,7 +106,7 @@ class SubjectsListView(generics.ListCreateAPIView):
 
 class TagsListView(generics.ListCreateAPIView):
     permission_classes = [
-        permissions.IsAdminUser
+        permissions.IsAuthenticatedOrReadOnly
     ]
     queryset = Tag.objects.all()
     serializer_class = TagsSerializer
