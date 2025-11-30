@@ -32,8 +32,8 @@ if not SECRET_KEY:
         raise ImproperlyConfigured("Set DJANGO_SECRET_KEY")
 
 if DEBUG:
-    ALLOWED_HOSTS = os.getenv(
-        "ALLOWED_HOSTS").split(",")
+    ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(
+        ",") if os.getenv("ALLOWED_HOSTS") else []
 else:
     hosts = os.getenv("ALLOWED_HOSTS")
     if not hosts.strip():
@@ -48,6 +48,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.BasicAuthentication',
         'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
     ]
 }
 
@@ -60,6 +61,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'reviews.apps.ReviewsConfig',
     'rest_framework',
+    'rest_framework.authtoken',
+    'drf_registration',
 ]
 
 MIDDLEWARE = [
