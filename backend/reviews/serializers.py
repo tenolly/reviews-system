@@ -1,6 +1,18 @@
 from django.shortcuts import get_object_or_404
 from reviews.models import Contact, Faculty, Review, Subject, Tag, Teacher
 from rest_framework import serializers
+from django.contrib.auth.models import User
+
+
+class UserSerializer(serializers.ModelSerializer):
+    reviews = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Review.objects.all()
+    )
+
+    class Meta:
+        model = User
+        fields = ["id", "username", "reviews"]
 
 
 class ContactSerializer(serializers.ModelSerializer):
@@ -18,6 +30,7 @@ class TeacherReadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Teacher
         fields = [
+            "id",
             "isu",
             "name",
             "photo_url",
@@ -41,12 +54,15 @@ class ReviewSerializer(serializers.ModelSerializer):
         queryset=Teacher.objects.all(),
     )
 
+    owner = serializers.ReadOnlyField(source="owner.username")
+
     class Meta:
         model = Review
         fields = [
+            "id",
             "teacher",
             "subject",
-            "user",
+            "owner",
             "study_year",
             "comment",
             "overall",

@@ -79,8 +79,8 @@ class TeacherFaculty(models.Model):
 class Review(models.Model):
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL,
-                             on_delete=models.CASCADE)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL,
+                              on_delete=models.CASCADE)
 
     study_year = models.IntegerField(
         validators=[MinValueValidator(1980), MaxValueValidator(2050)])
@@ -123,11 +123,11 @@ class Review(models.Model):
         indexes = [
             models.Index(fields=["teacher"]),
             models.Index(fields=["subject"]),
-            models.Index(fields=["user"]),
+            models.Index(fields=["owner"]),
         ]
 
     def __str__(self):
-        return f"Review #{self.id} by {self.user} for {self.teacher}"
+        return f"Review #{self.id} by {self.owner} for {self.teacher}"
 
 
 class ReviewTag(models.Model):
