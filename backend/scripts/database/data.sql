@@ -130,25 +130,6 @@ VALUES
   ('bob',   'hash2', 'bob@example.com',   false)
 ON CONFLICT (username) DO NOTHING;
 
--- FACULTIES
-INSERT INTO faculties (code, name) VALUES
-  ('ICT', 'Инфокоммуникационные технологии'),
-  ('CS',  'Компьютерные технологии и управление')
-ON CONFLICT (name) DO NOTHING;
-
--- TEACHER_FACULTIES
-INSERT INTO teacher_faculties (teacher_id, faculty_id, since_date, until_date)
-SELECT t.id, f.id, DATE '2022-09-01', NULL
-FROM teachers t, faculties f
-WHERE t.isu=1001 AND f.code='CS'
-ON CONFLICT DO NOTHING;
-
-INSERT INTO teacher_faculties (teacher_id, faculty_id, since_date, until_date)
-SELECT t.id, f.id, DATE '2023-09-01', NULL
-FROM teachers t, faculties f
-WHERE t.isu=1002 AND f.code='ICT'
-ON CONFLICT DO NOTHING;
-
 -- TEACHER_PHOTOS
 INSERT INTO teacher_photos (teacher_id, url, is_primary, source)
 SELECT id, 'https://example.com/p/1001.jpg', true, 'seed'
