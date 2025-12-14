@@ -53,29 +53,6 @@ class Tag(models.Model):
         return self.name
 
 
-class Faculty(models.Model):
-    code = models.CharField(max_length=64, unique=True, null=True, blank=True)
-    name = models.CharField(max_length=255, unique=True)
-
-    class Meta:
-        db_table = "faculties"
-
-    def __str__(self):
-        return self.name
-
-
-# TODO: just use a simple models.ManyToMany?
-class TeacherFaculty(models.Model):
-    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE)
-    faculty = models.ForeignKey(Faculty, on_delete=models.RESTRICT)
-
-    class Meta:
-        db_table = "teacher_faculties"
-
-    def __str__(self):
-        return f"{self.teacher} — {self.faculty}"
-
-
 class Review(models.Model):
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
@@ -84,7 +61,7 @@ class Review(models.Model):
 
     study_year = models.IntegerField(
         validators=[MinValueValidator(1980), MaxValueValidator(2050)])
-    comment = models.TextField(null=False)
+    comment = models.TextField(null=False, blank=True)
 
     overall = models.SmallIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(5)])
@@ -106,7 +83,7 @@ class Review(models.Model):
         db_table = "reviews"
         constraints = [
             models.UniqueConstraint(
-                fields=["teacher", "subject", "comment"], name="uniq_review"),
+                fields=["teacher", "owner"], name="uniq_review_per_teacher_owner"),
             models.CheckConstraint(check=models.Q(study_year__gte=2000) & models.Q(study_year__lte=2100),
                                    name="reviews_study_year_2000_2100"),
             models.CheckConstraint(check=models.Q(overall__gte=1) & models.Q(overall__lte=5),
