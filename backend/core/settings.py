@@ -32,12 +32,12 @@ if not SECRET_KEY:
         raise ImproperlyConfigured("Set DJANGO_SECRET_KEY")
 
 if DEBUG:
-    ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,[::1]").split(",")
+    DJANGO_ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,[::1]").split(",")
 else:
-    hosts = os.getenv("ALLOWED_HOSTS", "")
+    hosts = os.getenv("DJANGO_ALLOWED_HOSTS", "")
     if not hosts.strip():
-        raise ImproperlyConfigured("Set ALLOWED_HOSTS when DEBUG=False")
-    ALLOWED_HOSTS = [h.strip() for h in hosts.split(",") if h.strip()]
+        raise ImproperlyConfigured("Set DJANGO_ALLOWED_HOSTS when DEBUG=False")
+    DJANGO_ALLOWED_HOSTS = [h.strip() for h in hosts.split(",") if h.strip()]
 
 # Application definition
 REST_FRAMEWORK = {
