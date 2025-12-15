@@ -106,9 +106,28 @@ export const clearAuth = () => {
 export const api = {
   client: apiClient,
 
-  async fetchTeachers() {
-    const { data } = await apiClient.get('/api/teachers/')
-    return Array.isArray(data) ? data : data?.results || []
+  async fetchTeachers({ page = 1, pageSize = 12, search = '', tags = [], ordering } = {}) {
+    const params = { page, page_size: pageSize }
+    if (search && String(search).trim()) {
+      params.q = String(search).trim()
+    }
+    if (Array.isArray(tags) && tags.length) {
+      params.tags = tags.join(',')
+    }
+    if (ordering) {
+      params.ordering = ordering
+    }
+
+    const { data } = await apiClient.get('/api/teachers/', { params })
+    if (Array.isArray(data)) {
+      return { results: data, count: data.length, next: null, previous: null }
+    }
+    return {
+      results: data?.results || [],
+      count: data?.count ?? (data?.results?.length || 0),
+      next: data?.next || null,
+      previous: data?.previous || null
+    }
   },
 
   async fetchTeacher(id) {
@@ -172,20 +191,8 @@ export const api = {
   },
 
   async fetchProfile() {
-    const candidates = ['/api/profile/', '/accounts/profile/', '/accounts/user/', '/auth/user/']
-    let lastError = null
-    for (const endpoint of candidates) {
-      try {
-        const response = await apiClient.get(endpoint)
-        return unwrap(response)
-      } catch (error) {
-        lastError = error
-      }
-    }
-    if (lastError) {
-      throw lastError
-    }
-    return null
+    const response = await apiClient.get('/api/profile/')
+    return unwrap(response)
   },
 
   async fetchAdminReviews() {

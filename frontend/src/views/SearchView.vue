@@ -4,7 +4,7 @@
       <h1>Поиск преподавателей</h1>
       <div class="filters">
         <label class="field">
-          <span class="label">Фильтр по ФИО или табельному номеру</span>
+          <span class="label">Фильтр по преподавателю</span>
           <input v-model="searchQuery" type="text" placeholder="Начните вводить ФИО или табельный номер" />
         </label>
         <label class="field">
@@ -108,11 +108,11 @@ const selectedTags = ref([])
 const sortKey = ref('rating')
 const sortOrder = ref('desc')
 const currentPage = ref(1)
-const pageSize = 18
+const pageSize = 12
+const teacherCount = ref(0)
 
 const availableTags = ref([])
 const teachersRaw = ref([])
-const teacherStats = ref({})
 const resultsRef = ref(null)
 const loading = ref(false)
 const errorMessage = ref('')
@@ -125,56 +125,11 @@ const metricDefinitions = [
   { key: 'fairness', label: 'Справедливость' }
 ]
 
-const teachers = computed(() =>
-  teachersRaw.value.map((teacher) => ({
-    ...teacher,
-    ...(teacherStats.value[teacher.id] || {})
-  }))
-)
+const teachers = computed(() => teachersRaw.value)
 
-const queryParts = computed(() => searchQuery.value.trim().toLowerCase().split(/\s+/).filter(Boolean))
+const totalPages = computed(() => Math.max(1, Math.ceil(teacherCount.value / pageSize)))
 
-const filteredResults = computed(() => {
-  return teachers.value.filter((teacher) => {
-    const matchesQuery = queryParts.value.length
-      ? queryParts.value.some((part) =>
-          teacher.fullName.toLowerCase().includes(part) || String(teacher.staffId).toLowerCase().includes(part)
-        )
-      : true
-
-    const matchesTags = selectedTags.value.length
-      ? selectedTags.value.every((tagId) => teacher.tags?.includes(tagId))
-      : true
-
-    return matchesQuery && matchesTags
-  })
-})
-
-const getSortValue = (teacher, key) => {
-  if (key === 'rating') {
-    return teacher.rating ?? 0
-  }
-  return teacher.metricsMap?.[key] ?? 0
-}
-
-const sortedResults = computed(() => {
-  const key = sortKey.value
-  const direction = sortOrder.value === 'asc' ? 1 : -1
-  return [...filteredResults.value].sort((a, b) => {
-    const diff = (getSortValue(a, key) - getSortValue(b, key)) * direction
-    if (diff !== 0) {
-      return diff
-    }
-    return a.fullName.localeCompare(b.fullName) * direction
-  })
-})
-
-const totalPages = computed(() => Math.max(1, Math.ceil(sortedResults.value.length / pageSize)))
-
-const pagedResults = computed(() => {
-  const start = (currentPage.value - 1) * pageSize
-  return sortedResults.value.slice(start, start + pageSize)
-})
+const pagedResults = computed(() => teachers.value)
 
 const scrollResultsToTop = () => {
   if (typeof window === 'undefined' || !resultsRef.value) {
@@ -187,10 +142,12 @@ const scrollResultsToTop = () => {
 
 watch([searchQuery, selectedTags], () => {
   currentPage.value = 1
+  void loadTeachers()
 })
 
 watch(sortKey, () => {
   currentPage.value = 1
+  void loadTeachers()
 })
 
 const handleTagSelection = (event) => {
@@ -203,6 +160,7 @@ const handleTagSelection = (event) => {
 
 const toggleSortOrder = () => {
   sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc'
+  void loadTeachers()
 }
 
 const removeTag = (tagId) => {
@@ -211,6 +169,7 @@ const removeTag = (tagId) => {
 
 const clearTags = () => {
   selectedTags.value = []
+  void loadTeachers()
 }
 
 const tagLabel = (tag) => {
@@ -229,68 +188,9 @@ const openReviews = (teacher) => {
 
 const handlePageChange = async (page) => {
   currentPage.value = page
+  await loadTeachers()
   await nextTick()
   scrollResultsToTop()
-}
-
-const aggregateMetrics = (reviews = []) => {
-  if (!reviews.length) {
-    return {
-      rating: 0,
-      metrics: metricDefinitions.map((metric) => ({ key: metric.key, label: metric.label, score: 0 })),
-      metricsMap: {},
-      reviewCount: 0
-    }
-  }
-
-  const totals = {
-    overall: 0,
-    difficulty: 0,
-    interesting: 0,
-    responsibility: 0,
-    fairness: 0
-  }
-
-  reviews.forEach((review) => {
-    Object.keys(totals).forEach((key) => {
-      const value = Number(review[key]) || 0
-      totals[key] += value
-    })
-  })
-
-  const metrics = metricDefinitions.map((metric) => {
-    const value = totals[metric.key] / reviews.length
-    return { key: metric.key, label: metric.label, score: Number(value.toFixed(2)) }
-  })
-
-  const rating = metrics.reduce((acc, metric) => acc + metric.score, 0) / metrics.length
-  const metricsMap = metrics.reduce((acc, metric) => {
-    acc[metric.key] = metric.score
-    return acc
-  }, {})
-
-  return {
-    rating: Number(rating.toFixed(2)),
-    metrics,
-    metricsMap,
-    reviewCount: reviews.length
-  }
-}
-
-const fetchTeacherStats = async (teacher) => {
-  if (!teacher?.isu) {
-    return
-  }
-  try {
-    const page = await api.fetchReviews({ teacherIsu: teacher.isu })
-    const reviews = page?.results || []
-    teacherStats.value = {
-      ...teacherStats.value,
-      [teacher.id]: aggregateMetrics(reviews)
-    }
-  } catch (error) {
-    console.warn('Не удалось загрузить отзывы преподавателя', teacher.id, error)
-  }
 }
 
 const loadTags = async () => {
@@ -307,6 +207,13 @@ const loadTags = async () => {
 }
 
 const mapTeacher = (entry) => {
+  const metricsMap = entry.metrics || {}
+  const metrics = metricDefinitions.map((metric) => ({
+    key: metric.key,
+    label: metric.label,
+    score: Number(metricsMap[metric.key] ?? 0)
+  }))
+
   const tagDetails = (entry.tags || []).map((tag) => ({
     id: String(tag.id ?? tag.name),
     name: tag.name || String(tag.id),
@@ -318,22 +225,29 @@ const mapTeacher = (entry) => {
     isu: entry.isu,
     fullName: entry.name,
     staffId: entry.isu,
-    rating: 0,
+    rating: Number(entry.rating ?? 0),
+    reviewCount: Number(entry.review_count ?? entry.reviewCount ?? 0),
     tags: tagDetails.map((tag) => tag.id),
     tagDetails,
     photo: entry.photo_url || 'https://via.placeholder.com/120x120.png?text=RS',
-    metrics: [],
-    metricsMap: {}
+    metrics,
+    metricsMap
   }
 }
 
 const loadTeachers = async () => {
   const fallbackMessage = 'Не удалось загрузить список преподавателей. Проверьте бэкенд.'
   try {
-    const data = await api.fetchTeachers()
-    teachersRaw.value = (data || []).map(mapTeacher)
-    const sample = teachersRaw.value.slice(0, 12)
-    await Promise.all(sample.map((teacher) => fetchTeacherStats(teacher)))
+    const ordering = sortOrder.value === 'desc' ? `-${sortKey.value}` : sortKey.value
+    const data = await api.fetchTeachers({
+      page: currentPage.value,
+      pageSize,
+      search: searchQuery.value,
+      tags: selectedTags.value,
+      ordering
+    })
+    teachersRaw.value = (data?.results || []).map(mapTeacher)
+    teacherCount.value = data?.count ?? teachersRaw.value.length
   } catch (error) {
     console.error(fallbackMessage, error)
     errorMessage.value = fallbackMessage

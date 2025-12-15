@@ -291,24 +291,41 @@ const teacher = computed(() => {
   }
 })
 
+const normalizePhotoUrl = (url) => {
+  if (!url) return 'https://via.placeholder.com/160x160.png?text=RS'
+  if (url.startsWith?.('http://') || url.startsWith?.('https://')) return url
+  if (typeof url === 'string' && (url.startsWith('http://') || url.startsWith('https://'))) return url
+  return `https://my.itmo.ru${url}`
+}
+
 const teacherContacts = computed(() => {
   const contacts = teacherBase.value?.contacts ?? []
-  if (Array.isArray(contacts)) {
-    return contacts.map((item, index) => ({
-      key: `contact-${index}`,
-      label: 'Контакт',
-      value: String(item)
-    }))
+  const phone = teacherBase.value?.phone
+  const profileUrl = teacherBase.value?.profileUrl
+
+  const rows = []
+
+  if (phone) {
+    rows.push({ key: 'phone', label: 'Телефон', value: phone })
   }
 
-  const objectContacts = teacherBase.value?.contacts ?? {}
-  const items = []
-  if (objectContacts.phone) items.push({ key: 'phone', label: 'Телефон', value: objectContacts.phone })
-  if (objectContacts.email) items.push({ key: 'email', label: 'Почта', value: objectContacts.email })
-  if (objectContacts.telegram) items.push({ key: 'telegram', label: 'Telegram', value: objectContacts.telegram })
-  if (objectContacts.office) items.push({ key: 'office', label: 'Аудитория', value: objectContacts.office })
-  if (objectContacts.site) items.push({ key: 'site', label: 'Сайт', value: objectContacts.site })
-  return items
+  if (profileUrl) {
+    rows.push({ key: 'profile', label: 'Сайт', value: profileUrl })
+  }
+
+  if (Array.isArray(contacts)) {
+    contacts.forEach((item, index) => {
+      rows.push({ key: `contact-${index}`, label: 'Контакт', value: String(item) })
+    })
+  } else if (contacts && typeof contacts === 'object') {
+    const objectContacts = contacts
+    if (objectContacts.email) rows.push({ key: 'email', label: 'Почта', value: objectContacts.email })
+    if (objectContacts.telegram) rows.push({ key: 'telegram', label: 'Telegram', value: objectContacts.telegram })
+    if (objectContacts.office) rows.push({ key: 'office', label: 'Аудитория', value: objectContacts.office })
+    if (objectContacts.site) rows.push({ key: 'site', label: 'Сайт', value: objectContacts.site })
+  }
+
+  return rows
 })
 
 const userReview = computed(() => {
@@ -408,18 +425,21 @@ const loadTeacher = async () => {
     if (lastTeacherId) {
       try {
         const data = await api.fetchTeacher(lastTeacherId)
+        const normalizedPhoto = normalizePhotoUrl(data.photo_url)
         teacherBase.value = {
           id: data.id,
           isu: data.isu,
           fullName: data.name,
           staffId: data.isu,
-          photo: data.photo_url || 'https://via.placeholder.com/160x160.png?text=RS',
+          photo: normalizedPhoto,
           tags: (data.tags || []).map((tag) => ({
             id: String(tag.id ?? tag.name),
             name: tag.name || String(tag.id),
             count: tag.count ?? 0
           })),
-          contacts: data.contacts || []
+          contacts: data.contacts || [],
+          phone: data.phone || null,
+          profileUrl: data.url || null
         }
         saveLastTeacher(data.id)
         return
@@ -431,18 +451,21 @@ const loadTeacher = async () => {
     const list = await api.fetchTeachers()
     if (list && list.length) {
       const entry = list[0]
+      const normalizedPhoto = normalizePhotoUrl(entry.photo_url)
       teacherBase.value = {
         id: entry.id,
         isu: entry.isu,
         fullName: entry.name,
         staffId: entry.isu,
-        photo: entry.photo_url || 'https://via.placeholder.com/160x160.png?text=RS',
+        photo: normalizedPhoto,
         tags: (entry.tags || []).map((tag) => ({
           id: String(tag.id ?? tag.name),
           name: tag.name || String(tag.id),
           count: tag.count ?? 0
         })),
-        contacts: entry.contacts || []
+        contacts: entry.contacts || [],
+        phone: entry.phone || null,
+        profileUrl: entry.url || null
       }
       saveLastTeacher(entry.id)
       return

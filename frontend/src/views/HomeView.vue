@@ -58,10 +58,10 @@ const isBanned = computed(() => user.value.banned)
 const features = ref([])
 
 const loadFeatures = () => {
-  features.value = getFeaturesMock()
+  features.value = getFeatures()
 }
 
-const getFeaturesMock = () => [
+const getFeatures = () => [
   {
     title: 'Умный поиск',
     subtitle: 'Фильтруйте преподавателей по имени, тегам и показателям, чтобы быстро найти подходящего человека.',
@@ -73,8 +73,8 @@ const getFeaturesMock = () => [
     icon: '2'
   },
   {
-    title: 'Понятные дашборды',
-    subtitle: 'Давайте администраторам прозрачную картину качества преподавания и удовлетворенности студентов.',
+    title: 'Качество отзывов',
+    subtitle: 'Модераторы бдительно следят за качеством отзывов и за соблюдением правил посетителями сайта.',
     icon: '3'
   }
 ]
