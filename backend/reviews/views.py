@@ -3,7 +3,8 @@ from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
-from django.db.models import Count
+from django.db.models import Count, Q, Avg, F, ExpressionWrapper, FloatField
+from django.db.models.functions import Coalesce
 from reviews.permissions import IsOwnerOrReadOnly
 from reviews.serializers import *
 from reviews.models import BlackList, Teacher, Contact, Review, Subject, Tag
@@ -34,7 +35,85 @@ class TeacherListCreateView(generics.ListAPIView):
     serializer_class = TeacherReadSerializer
 
     def get_queryset(self):
-        return Teacher.objects.all().prefetch_related("contacts", "review_tags__tag")
+        queryset = Teacher.objects.all().prefetch_related("contacts", "review_tags__tag")
+
+        search = self.request.query_params.get("q", "").strip()
+        if search:
+            try:
+                isu_value = int(search)
+            except ValueError:
+                isu_value = None
+            name_filter = Q(name__icontains=search)
+            if isu_value is not None:
+                queryset = queryset.filter(name_filter | Q(isu=isu_value))
+            else:
+                queryset = queryset.filter(name_filter)
+
+        raw_tags = self.request.query_params.getlist("tags") or []
+        if not raw_tags:
+            raw_tags_param = self.request.query_params.get("tags")
+            if raw_tags_param:
+                raw_tags = [item for item in raw_tags_param.split(",") if item]
+
+        tag_ids = []
+        for raw in raw_tags:
+            try:
+                tag_ids.append(int(raw))
+            except (TypeError, ValueError):
+                continue
+
+        if tag_ids:
+            queryset = queryset.annotate(
+                matched_tags=Count(
+                    "review_tags__tag",
+                    filter=Q(review_tags__tag__id__in=tag_ids),
+                    distinct=True,
+                )
+            ).filter(matched_tags=len(tag_ids))
+
+        queryset = queryset.annotate(
+            review_count=Count("review", distinct=True),
+            overall_avg=Coalesce(Avg("review__overall"), 0.0),
+            difficulty_avg=Coalesce(Avg("review__difficulty"), 0.0),
+            interesting_avg=Coalesce(Avg("review__interesting"), 0.0),
+            responsibility_avg=Coalesce(Avg("review__responsibility"), 0.0),
+            fairness_avg=Coalesce(Avg("review__fairness"), 0.0),
+        )
+
+        queryset = queryset.annotate(
+            rating=ExpressionWrapper(
+                (
+                    F("overall_avg")
+                    + F("difficulty_avg")
+                    + F("interesting_avg")
+                    + F("responsibility_avg")
+                    + F("fairness_avg")
+                )
+                / 5.0,
+                output_field=FloatField(),
+            )
+        )
+
+        ordering_param = (self.request.query_params.get("ordering") or "").strip()
+        allowed = {
+            "rating": "rating",
+            "overall": "overall_avg",
+            "difficulty": "difficulty_avg",
+            "interesting": "interesting_avg",
+            "responsibility": "responsibility_avg",
+            "fairness": "fairness_avg",
+            "review_count": "review_count",
+        }
+
+        if ordering_param:
+            direction = "-" if ordering_param.startswith("-") else ""
+            key = ordering_param.lstrip("-")
+            if key in allowed:
+                queryset = queryset.order_by(f"{direction}{allowed[key]}")
+        else:
+            queryset = queryset.order_by("-rating", "name")
+
+        return queryset
 
 
 class TeacherListDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -204,6 +283,10 @@ class AdminUserBanToggleView(APIView):
     def post(self, request, pk):
         user = get_object_or_404(User, pk=pk)
         record = BlackList.objects.filter(user=user)
+
+        if user.is_superuser and not record.exists():
+            return Response({"detail": "Нельзя банить суперпользователя."}, status=status.HTTP_403_FORBIDDEN)
+
         if record.exists():
             record.delete()
             banned = False

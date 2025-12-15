@@ -145,7 +145,7 @@ const customSubject = ref('')
 const years = ref([])
 const ratingScales = ref([
   { key: 'overall', label: 'Общее впечатление', hint: '1 — плохо, 5 — отлично' },
-  { key: 'difficulty', label: 'Сложность', hint: '1 — легко, 5 — очень сложно' },
+  { key: 'difficulty', label: 'Сложность', hint: '1 — сложно, 5 — очень легко' },
   { key: 'interesting', label: 'Интерес', hint: '1 — скучно, 5 — вдохновляет' },
   { key: 'responsibility', label: 'Организация', hint: '1 — хаотично, 5 — структурировано' },
   { key: 'fairness', label: 'Справедливость', hint: '1 — непонятно, 5 — прозрачно' }
@@ -188,10 +188,12 @@ watch(
   }
 )
 
-const loadTeacherOptions = async () => {
+const loadTeacherOptions = async (search = '') => {
   try {
-    const data = await api.fetchTeachers()
-    teacherOptions.value = (data || []).map((item) => ({
+    // запрашиваем больше элементов, чтобы покрыть выборку из страницы отзывов
+    const page = await api.fetchTeachers({ page: 1, pageSize: 200, search })
+    const list = Array.isArray(page) ? page : page?.results || []
+    teacherOptions.value = list.map((item) => ({
       id: item.id,
       isu: item.isu,
       display: `${item.name} (${item.isu})`
@@ -458,9 +460,24 @@ const initialize = async () => {
 
   const teacherFromQuery = route.query.teacherId
   if (typeof teacherFromQuery === 'string' && teacherFromQuery) {
-    const option = teacherOptions.value.find(
+    let option = teacherOptions.value.find(
       (item) => String(item.id) === teacherFromQuery || String(item.isu) === teacherFromQuery
     )
+
+    if (!option) {
+      try {
+        const teacherData = await api.fetchTeacher(teacherFromQuery)
+        option = {
+          id: teacherData.id,
+          isu: teacherData.isu,
+          display: `${teacherData.name} (${teacherData.isu})`
+        }
+        teacherOptions.value = [...teacherOptions.value, option]
+      } catch (error) {
+        console.warn('Не удалось найти преподавателя для автоподстановки', error)
+      }
+    }
+
     if (option) {
       form.teacherIsu = String(option.isu)
       form.teacherQuery = option.display
@@ -480,9 +497,24 @@ watch(
   () => route.query.teacherId,
   async (value) => {
     if (typeof value === 'string' && value) {
-      const option = teacherOptions.value.find(
+      let option = teacherOptions.value.find(
         (item) => String(item.id) === value || String(item.isu) === value
       )
+
+      if (!option) {
+        try {
+          const teacherData = await api.fetchTeacher(value)
+          option = {
+            id: teacherData.id,
+            isu: teacherData.isu,
+            display: `${teacherData.name} (${teacherData.isu})`
+          }
+          teacherOptions.value = [...teacherOptions.value, option]
+        } catch (error) {
+          console.warn('Не удалось найти преподавателя для автоподстановки', error)
+        }
+      }
+
       if (option) {
         form.teacherIsu = String(option.isu)
         form.teacherQuery = option.display

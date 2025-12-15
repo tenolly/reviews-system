@@ -5,14 +5,8 @@
         <span class="brand-icon">RS</span>
         <div>
           <div class="title">Система отзывов</div>
-          <div class="subtitle">Прозрачная обратная связь для лучших занятий</div>
+          <div class="subtitle">Сделай учебы других прозрачнее</div>
         </div>
-      </div>
-      <div class="footer-links">
-        <router-link to="/">Главная</router-link>
-        <router-link to="/search">Поиск</router-link>
-        <router-link to="/reviews">Отзывы</router-link>
-        <router-link to="/rate">Оценивание</router-link>
       </div>
       <div class="footer-meta">
         <span>&copy; {{ currentYear }} Система отзывов</span>
@@ -70,21 +64,6 @@ const currentYear = computed(() => new Date().getFullYear())
   color: var(--color-muted);
 }
 
-.footer-links {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-}
-
-.footer-links a {
-  color: var(--color-primary);
-  font-size: 14px;
-}
-
-.footer-links a:hover {
-  color: var(--color-primary-dark);
-}
-
 .footer-meta {
   font-size: 13px;
   color: var(--color-muted);
@@ -95,14 +74,6 @@ const currentYear = computed(() => new Date().getFullYear())
   color: rgba(255, 255, 255, 0.88);
 }
 
-:global([data-theme='dark']) .footer-links a {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-:global([data-theme='dark']) .footer-links a:hover {
-  color: #ffffff;
-}
-
 :global([data-theme='dark']) .footer-meta {
   color: rgba(255, 255, 255, 0.7);
 }
@@ -111,10 +82,6 @@ const currentYear = computed(() => new Date().getFullYear())
   .footer-inner {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .footer-links {
-    flex-wrap: wrap;
   }
 }
 </style>

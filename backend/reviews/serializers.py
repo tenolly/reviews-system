@@ -27,6 +27,9 @@ class ContactSerializer(serializers.ModelSerializer):
 class TeacherReadSerializer(serializers.ModelSerializer):
     contacts = serializers.StringRelatedField(many=True)
     tags = serializers.SerializerMethodField()
+    rating = serializers.FloatField(read_only=True)
+    review_count = serializers.IntegerField(read_only=True)
+    metrics = serializers.SerializerMethodField()
 
     class Meta:
         model = Teacher
@@ -39,6 +42,9 @@ class TeacherReadSerializer(serializers.ModelSerializer):
             "url",
             "contacts",
             "tags",
+            "rating",
+            "review_count",
+            "metrics",
         ]
 
     def get_tags(self, obj):
@@ -56,6 +62,15 @@ class TeacherReadSerializer(serializers.ModelSerializer):
             }
             for item in popular
         ]
+
+    def get_metrics(self, obj):
+        return {
+            "overall": getattr(obj, "overall_avg", 0),
+            "difficulty": getattr(obj, "difficulty_avg", 0),
+            "interesting": getattr(obj, "interesting_avg", 0),
+            "responsibility": getattr(obj, "responsibility_avg", 0),
+            "fairness": getattr(obj, "fairness_avg", 0),
+        }
 
 
 class TeacherWriteSerializer(serializers.ModelSerializer):
